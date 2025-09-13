@@ -1,9 +1,9 @@
-import { auth } from "@/app/lib/auth"
+import { getSession } from "@/app/lib/auth-middleware"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
 export default async function middleware(request: NextRequest) {
-  const session = await auth()
+  const session = await getSession(request)
   const { pathname } = request.nextUrl
 
   // Public routes that don't require authentication
@@ -54,7 +54,9 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
+     * - .well-known (security.txt etc)
+     * And files with extensions
      */
-    "/((?!api|_next/static|_next/image|favicon.ico).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|.*\\..*|_next/.*|_vercel/.*).*)",
   ],
 }
