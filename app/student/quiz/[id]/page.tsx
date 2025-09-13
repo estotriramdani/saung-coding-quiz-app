@@ -6,7 +6,16 @@ import { useRouter } from "next/navigation"
 import { Role, QuestionType } from "@prisma/client"
 import useSWR from "swr"
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json())
+const fetcher = async (url: string) => {
+  const res = await fetch(url)
+  if (!res.ok) {
+    const error = new Error('An error occurred while fetching the data.') as any
+    error.info = await res.json()
+    error.status = res.status
+    throw error
+  }
+  return res.json()
+}
 
 interface Question {
   id: string
@@ -83,9 +92,15 @@ export default function TakeQuizPage({ params }: { params: Promise<{ id: string 
       if (response.ok) {
         const attempt = await response.json()
         setAttemptId(attempt.id)
+      } else {
+        const errorData = await response.json()
+        console.error("Failed to start quiz attempt:", errorData.error)
+        // You could also show an alert or redirect here
+        alert(`Failed to start quiz: ${errorData.error}`)
       }
     } catch (error) {
       console.error("Error starting quiz attempt:", error)
+      alert("Failed to start quiz attempt. Please try again.")
     }
   }
 
@@ -147,9 +162,18 @@ export default function TakeQuizPage({ params }: { params: Promise<{ id: string 
   }
 
   if (error) {
+    const errorMessage = error.status === 403 
+      ? "You have reached the maximum number of attempts for this quiz."
+      : "Error loading quiz. Please make sure you're enrolled."
+    
     return (
       <div className="alert alert-error">
-        <span>Error loading quiz. Please make sure you're enrolled.</span>
+        <span>{errorMessage}</span>
+        <div className="mt-2">
+          <a href="/student/quizzes" className="btn btn-sm btn-outline">
+            Back to Quizzes
+          </a>
+        </div>
       </div>
     )
   }
@@ -194,6 +218,13 @@ export default function TakeQuizPage({ params }: { params: Promise<{ id: string 
               style={{ width: `${progress}%` }}
             ></div>
           </div>
+
+          {/* Attempt Status */}
+          {!attemptId && (
+            <div className="alert alert-warning mt-2">
+              <span>Initializing quiz attempt...</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -277,10 +308,10 @@ export default function TakeQuizPage({ params }: { params: Promise<{ id: string 
             {currentQuestionIndex === quiz.questions.length - 1 ? (
               <button
                 onClick={handleSubmit}
-                disabled={isSubmitting}
+                disabled={isSubmitting || !attemptId}
                 className="btn btn-primary"
               >
-                {isSubmitting ? "Submitting..." : "Submit Quiz"}
+                {isSubmitting ? "Submitting..." : !attemptId ? "Loading..." : "Submit Quiz"}
               </button>
             ) : (
               <button

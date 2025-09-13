@@ -15,6 +15,7 @@ interface Quiz {
   code: string
   materialUrl?: string
   timeLimit?: number
+  maxAttempts?: number
   isActive: boolean
   createdBy: {
     name?: string
@@ -25,6 +26,8 @@ interface Quiz {
     enrollments: number
   }
   isEnrolled?: boolean
+  attemptCount: number
+  canRetake: boolean
   hasAttempted?: boolean
 }
 
@@ -155,6 +158,15 @@ export default function StudentQuizzesPage() {
                       <span>{quiz.timeLimit} min</span>
                     </div>
                   )}
+                  {quiz.isEnrolled && (
+                    <div className="flex justify-between">
+                      <span>Attempts:</span>
+                      <span>
+                        {quiz.attemptCount}{quiz.maxAttempts ? `/${quiz.maxAttempts}` : '/∞'}
+                        {!quiz.canRetake && <span className="text-error ml-1">(Max reached)</span>}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {quiz.materialUrl && (
@@ -171,18 +183,7 @@ export default function StudentQuizzesPage() {
                 )}
 
                 <div className="card-actions justify-end mt-4">
-                  {quiz.hasAttempted ? (
-                    <button className="btn btn-disabled">
-                      Already Attempted
-                    </button>
-                  ) : quiz.isEnrolled ? (
-                    <Link
-                      href={`/student/quiz/${quiz.id}`}
-                      className="btn btn-primary"
-                    >
-                      Take Quiz
-                    </Link>
-                  ) : (
+                  {!quiz.isEnrolled ? (
                     <button
                       onClick={() => enrollInQuiz(quiz.code)}
                       disabled={isEnrolling}
@@ -190,6 +191,17 @@ export default function StudentQuizzesPage() {
                     >
                       {isEnrolling ? "Enrolling..." : "Enroll"}
                     </button>
+                  ) : !quiz.canRetake ? (
+                    <button className="btn btn-disabled">
+                      Already Attempted
+                    </button>
+                  ) : (
+                    <Link
+                      href={`/student/quiz/${quiz.id}`}
+                      className="btn btn-primary"
+                    >
+                      {quiz.attemptCount > 0 ? 'Retake Quiz' : 'Take Quiz'}
+                    </Link>
                   )}
                 </div>
               </div>

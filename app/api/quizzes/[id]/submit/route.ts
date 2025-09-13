@@ -99,7 +99,7 @@ export async function POST(
       data: {
         completedAt,
         timeSpent,
-        score: (totalScore / totalPossiblePoints) * 100,
+        score: totalScore, // Store raw score, not percentage
         totalPoints: totalPossiblePoints,
         answers: {
           create: questionAnswers.map(qa => ({

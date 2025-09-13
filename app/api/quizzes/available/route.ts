@@ -39,19 +39,27 @@ export async function GET(request: NextRequest) {
     })
 
     // Transform the data to include enrollment and attempt status
-    const transformedQuizzes = quizzes.map(quiz => ({
-      id: quiz.id,
-      title: quiz.title,
-      description: quiz.description,
-      code: quiz.code,
-      materialUrl: quiz.materialUrl,
-      timeLimit: quiz.timeLimit,
-      isActive: quiz.isActive,
-      createdBy: quiz.createdBy,
-      _count: quiz._count,
-      isEnrolled: quiz.enrollments.length > 0,
-      hasAttempted: quiz.attempts.length > 0,
-    }))
+    const transformedQuizzes = quizzes.map(quiz => {
+      const attemptCount = quiz.attempts.length
+      const canRetake = !quiz.maxAttempts || attemptCount < quiz.maxAttempts
+      
+      return {
+        id: quiz.id,
+        title: quiz.title,
+        description: quiz.description,
+        code: quiz.code,
+        materialUrl: quiz.materialUrl,
+        timeLimit: quiz.timeLimit,
+        maxAttempts: quiz.maxAttempts,
+        isActive: quiz.isActive,
+        createdBy: quiz.createdBy,
+        _count: quiz._count,
+        isEnrolled: quiz.enrollments.length > 0,
+        attemptCount: attemptCount,
+        canRetake: canRetake,
+        hasAttempted: attemptCount > 0,
+      }
+    })
 
     return NextResponse.json(transformedQuizzes)
   } catch (error) {

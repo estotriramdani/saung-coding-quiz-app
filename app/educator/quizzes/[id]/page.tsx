@@ -28,7 +28,16 @@ const questionSchema = z.object({
   points: z.number().min(1, "Points must be at least 1"),
 })
 
+const quizEditSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z.string().optional(),
+  materialUrl: z.string().url().optional().or(z.literal("")),
+  timeLimit: z.number().min(1, "Time limit must be at least 1 minute").optional(),
+  maxAttempts: z.number().min(1, "Max attempts must be at least 1").optional(),
+})
+
 type QuestionForm = z.infer<typeof questionSchema>
+type QuizEditForm = z.infer<typeof quizEditSchema>
 
 interface Quiz {
   id: string
@@ -65,6 +74,7 @@ export default function QuizDetailPage({ params }: { params: Promise<{ id: strin
   const [editingQuestion, setEditingQuestion] = useState<string | null>(null)
   const [isImporting, setIsImporting] = useState(false)
   const [importPreview, setImportPreview] = useState<any[] | null>(null)
+  const [isEditingQuiz, setIsEditingQuiz] = useState(false)
 
   // Await params
   useEffect(() => {
@@ -86,6 +96,15 @@ export default function QuizDetailPage({ params }: { params: Promise<{ id: strin
       points: 1,
       options: ["", "", "", ""],
     }
+  })
+
+  const {
+    register: registerQuiz,
+    handleSubmit: handleSubmitQuiz,
+    reset: resetQuiz,
+    formState: { errors: quizErrors },
+  } = useForm<QuizEditForm>({
+    resolver: zodResolver(quizEditSchema),
   })
 
   const watchQuestionType = watch("type")
@@ -297,6 +316,85 @@ export default function QuizDetailPage({ params }: { params: Promise<{ id: strin
     } catch (error) {
       console.error("Error updating quiz status:", error)
       alert("Failed to update quiz status")
+    }
+  }
+
+  const startEditingQuiz = () => {
+    setIsEditingQuiz(true)
+    resetQuiz({
+      title: quiz.title,
+      description: quiz.description || "",
+      materialUrl: quiz.materialUrl || "",
+      timeLimit: quiz.timeLimit || undefined,
+      maxAttempts: quiz.maxAttempts || undefined,
+    })
+  }
+
+  const cancelEditingQuiz = () => {
+    setIsEditingQuiz(false)
+    resetQuiz()
+  }
+
+  const updateQuiz = async (data: QuizEditForm) => {
+    if (!quizId) return
+    
+    setIsLoading(true)
+    try {
+      const response = await fetch(`/api/quizzes/${quizId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: data.title,
+          description: data.description || null,
+          materialUrl: data.materialUrl || null,
+          timeLimit: data.timeLimit || null,
+          maxAttempts: data.maxAttempts || null,
+        }),
+      })
+
+      if (response.ok) {
+        await mutate(`/api/quizzes/${quizId}`)
+        setIsEditingQuiz(false)
+        alert("Quiz updated successfully!")
+      } else {
+        const error = await response.json()
+        throw new Error(error.error || "Failed to update quiz")
+      }
+    } catch (error) {
+      console.error("Error updating quiz:", error)
+      alert("Failed to update quiz")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const deleteQuiz = async () => {
+    if (!quizId) return
+    
+    const confirmed = confirm(
+      "Are you sure you want to delete this quiz? This action cannot be undone and will remove all questions, attempts, and enrollments."
+    )
+    
+    if (!confirmed) return
+    
+    setIsLoading(true)
+    try {
+      const response = await fetch(`/api/quizzes/${quizId}`, {
+        method: "DELETE",
+      })
+
+      if (response.ok) {
+        alert("Quiz deleted successfully!")
+        router.push("/educator/quizzes")
+      } else {
+        const error = await response.json()
+        throw new Error(error.error || "Failed to delete quiz")
+      }
+    } catch (error) {
+      console.error("Error deleting quiz:", error)
+      alert("Failed to delete quiz")
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -701,11 +799,235 @@ export default function QuizDetailPage({ params }: { params: Promise<{ id: strin
       {/* Settings Tab */}
       {activeTab === "settings" && (
         <div className="space-y-6">
-          <div className="alert alert-warning">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="stroke-current shrink-0 w-6 h-6">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
-            </svg>
-            <span>Quiz settings management will be available in a future update.</span>
+          <div className="card bg-base-100 shadow-xl">
+            <div className="card-body">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="card-title">Quiz Settings</h2>
+                {!isEditingQuiz ? (
+                  <button
+                    onClick={startEditingQuiz}
+                    className="btn btn-primary"
+                  >
+                    Edit Quiz Details
+                  </button>
+                ) : (
+                  <button
+                    onClick={cancelEditingQuiz}
+                    className="btn btn-ghost"
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
+
+              {!isEditingQuiz ? (
+                // View Mode
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="label">
+                        <span className="label-text font-medium">Quiz Title</span>
+                      </label>
+                      <div className="p-3 bg-base-200 rounded-lg">
+                        {quiz.title}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className="label">
+                        <span className="label-text font-medium">Enrollment Code</span>
+                      </label>
+                      <div className="p-3 bg-base-200 rounded-lg">
+                        {quiz.code}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="label">
+                        <span className="label-text font-medium">Time Limit</span>
+                      </label>
+                      <div className="p-3 bg-base-200 rounded-lg">
+                        {quiz.timeLimit ? `${quiz.timeLimit} minutes` : "No limit"}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="label">
+                        <span className="label-text font-medium">Maximum Attempts</span>
+                      </label>
+                      <div className="p-3 bg-base-200 rounded-lg">
+                        {quiz.maxAttempts ? `${quiz.maxAttempts} attempt${quiz.maxAttempts > 1 ? 's' : ''}` : "Unlimited"}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="label">
+                      <span className="label-text font-medium">Description</span>
+                    </label>
+                    <div className="p-3 bg-base-200 rounded-lg min-h-[100px]">
+                      {quiz.description || "No description provided"}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="label">
+                      <span className="label-text font-medium">Study Material URL</span>
+                    </label>
+                    <div className="p-3 bg-base-200 rounded-lg">
+                      {quiz.materialUrl ? (
+                        <a href={quiz.materialUrl} target="_blank" rel="noopener noreferrer" className="link link-primary">
+                          {quiz.materialUrl}
+                        </a>
+                      ) : (
+                        "No study material provided"
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                // Edit Mode
+                <form onSubmit={handleSubmitQuiz(updateQuiz)} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="form-control w-full">
+                      <label className="label">
+                        <span className="label-text font-medium">Quiz Title *</span>
+                      </label>
+                      <input
+                        {...registerQuiz("title")}
+                        type="text"
+                        placeholder="Enter quiz title"
+                        className={`input input-bordered w-full ${quizErrors.title ? 'input-error' : ''}`}
+                      />
+                      {quizErrors.title && (
+                        <label className="label">
+                          <span className="label-text-alt text-error">
+                            {quizErrors.title.message}
+                          </span>
+                        </label>
+                      )}
+                    </div>
+
+                    <div className="form-control w-full">
+                      <label className="label">
+                        <span className="label-text font-medium">Time Limit</span>
+                        <span className="label-text-alt">Optional</span>
+                      </label>
+                      <div className="input-group">
+                        <input
+                          {...registerQuiz("timeLimit", { valueAsNumber: true })}
+                          type="number"
+                          min="1"
+                          max="300"
+                          placeholder="30"
+                          className="input input-bordered flex-1"
+                        />
+                        <span className="bg-base-200 px-4 flex items-center text-sm">minutes</span>
+                      </div>
+                      <label className="label">
+                        <span className="label-text-alt">Leave empty for no time limit</span>
+                      </label>
+                    </div>
+
+                    <div className="form-control w-full">
+                      <label className="label">
+                        <span className="label-text font-medium">Maximum Attempts</span>
+                        <span className="label-text-alt">Optional</span>
+                      </label>
+                      <div className="input-group">
+                        <input
+                          {...registerQuiz("maxAttempts", { valueAsNumber: true })}
+                          type="number"
+                          min="1"
+                          max="20"
+                          placeholder="Unlimited"
+                          className="input input-bordered flex-1"
+                        />
+                        <span className="bg-base-200 px-4 flex items-center text-sm">attempts</span>
+                      </div>
+                      <label className="label">
+                        <span className="label-text-alt">Leave empty for unlimited attempts</span>
+                      </label>
+                    </div>
+
+                    <div className="form-control w-full">
+                      <label className="label">
+                        <span className="label-text font-medium">Study Material URL</span>
+                        <span className="label-text-alt">Optional</span>
+                      </label>
+                      <input
+                        {...registerQuiz("materialUrl")}
+                        type="url"
+                        placeholder="https://example.com/study-material"
+                        className={`input input-bordered w-full ${quizErrors.materialUrl ? 'input-error' : ''}`}
+                      />
+                      {quizErrors.materialUrl && (
+                        <label className="label">
+                          <span className="label-text-alt text-error">
+                            {quizErrors.materialUrl.message}
+                          </span>
+                        </label>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="form-control w-full">
+                    <label className="label">
+                      <span className="label-text font-medium">Description</span>
+                      <span className="label-text-alt">Optional</span>
+                    </label>
+                    <textarea
+                      {...registerQuiz("description")}
+                      className="textarea textarea-bordered h-24"
+                      placeholder="Describe what this quiz covers..."
+                    />
+                  </div>
+
+                  <div className="card-actions justify-end">
+                    <button
+                      type="button"
+                      onClick={cancelEditingQuiz}
+                      className="btn btn-ghost"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="btn btn-primary"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? <span className="loading loading-spinner"></span> : "Save Changes"}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+
+          {/* Danger Zone */}
+          <div className="card bg-base-100 shadow-xl border border-error">
+            <div className="card-body">
+              <h3 className="card-title text-error">Danger Zone</h3>
+              <p className="text-sm opacity-70">
+                These actions are irreversible. Please be certain before proceeding.
+              </p>
+              
+              <div className="flex justify-between items-center pt-4">
+                <div>
+                  <h4 className="font-medium">Delete Quiz</h4>
+                  <p className="text-sm opacity-70">
+                    Permanently delete this quiz and all associated data.
+                  </p>
+                </div>
+                <button
+                  onClick={deleteQuiz}
+                  className="btn btn-error"
+                  disabled={isLoading}
+                >
+                  {isLoading ? <span className="loading loading-spinner"></span> : "Delete Quiz"}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

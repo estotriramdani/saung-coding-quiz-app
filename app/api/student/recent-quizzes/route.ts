@@ -52,7 +52,8 @@ export async function GET(request: NextRequest) {
 
     // Transform the data to match the expected interface
     const formattedQuizzes = recentQuizzes.map(attempt => ({
-      id: attempt.quiz.id,
+      id: attempt.id, // Use attempt ID for uniqueness
+      quizId: attempt.quiz.id, // Keep quiz ID for navigation
       title: attempt.quiz.title,
       score: attempt.score,
       completedAt: attempt.completedAt?.toISOString() || null,
@@ -89,7 +90,8 @@ export async function GET(request: NextRequest) {
 
     // Add unattempted quizzes to the list
     const unattemptedQuizzes = enrolledButNotAttempted.map(enrollment => ({
-      id: enrollment.quiz.id,
+      id: `enrollment-${enrollment.id}`, // Use enrollment ID for uniqueness
+      quizId: enrollment.quiz.id, // Keep quiz ID for navigation
       title: enrollment.quiz.title,
       score: null,
       completedAt: null,

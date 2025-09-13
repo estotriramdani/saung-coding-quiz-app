@@ -29,16 +29,28 @@ export async function POST(
       return NextResponse.json({ error: "You are not enrolled in this quiz" }, { status: 403 })
     }
 
-    // Check if already attempted
-    const existingAttempt = await prisma.quizAttempt.findFirst({
-      where: {
-        userId: session.user.id,
-        quizId: id,
-      }
+    // Get quiz details to check maxAttempts
+    const quiz = await prisma.quiz.findUnique({
+      where: { id },
+      select: { maxAttempts: true }
     })
 
-    if (existingAttempt) {
-      return NextResponse.json({ error: "You have already attempted this quiz" }, { status: 403 })
+    if (!quiz) {
+      return NextResponse.json({ error: "Quiz not found" }, { status: 404 })
+    }
+
+    // Check attempt count vs maxAttempts
+    if (quiz.maxAttempts) {
+      const attemptCount = await prisma.quizAttempt.count({
+        where: {
+          userId: session.user.id,
+          quizId: id,
+        }
+      })
+
+      if (attemptCount >= quiz.maxAttempts) {
+        return NextResponse.json({ error: "Maximum attempts reached" }, { status: 403 })
+      }
     }
 
     // Create new attempt

@@ -14,6 +14,7 @@ interface StudentStats {
 
 interface RecentQuiz {
   id: string
+  quizId: string
   title: string
   score: number | null
   completedAt: string | null
@@ -142,7 +143,7 @@ export default function StudentDashboard() {
                           {((quiz.score / quiz.totalPoints) * 100).toFixed(0)}%
                         </div>
                       ) : quiz.canRetake ? (
-                        <a href={`/student/quiz/${quiz.id}`} className="badge badge-warning">
+                        <a href={`/student/quiz/${quiz.quizId}`} className="badge badge-warning">
                           {quiz.attemptCount > 0 ? 'Retake' : 'Take Quiz'}
                         </a>
                       ) : (
