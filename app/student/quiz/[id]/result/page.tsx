@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Role, QuestionType } from "@prisma/client"
 import useSWR from "swr"
+import { use } from "react"
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
@@ -38,14 +39,15 @@ interface QuizResult {
   answers: QuestionAnswer[]
 }
 
-export default function QuizResultPage({ params }: { params: { id: string } }) {
+export default function QuizResultPage({ params }: { params: Promise<{ id: string }> }) {
   const { data: session } = useSession()
   const searchParams = useSearchParams()
   const attemptId = searchParams.get('attemptId')
+  const resolvedParams = use(params)
 
   const { data: result, error } = useSWR<QuizResult>(
     session?.user?.role === Role.STUDENT && attemptId 
-      ? `/api/quizzes/${params.id}/result?attemptId=${attemptId}` 
+      ? `/api/quizzes/${resolvedParams.id}/result?attemptId=${attemptId}` 
       : null,
     fetcher
   )

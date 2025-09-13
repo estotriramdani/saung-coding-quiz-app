@@ -5,9 +5,10 @@ import { Role } from "@prisma/client"
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await auth()
     
     if (!session?.user || session.user.role !== Role.STUDENT) {
@@ -19,7 +20,7 @@ export async function POST(
       where: {
         userId_quizId: {
           userId: session.user.id,
-          quizId: params.id,
+          quizId: id,
         }
       }
     })
@@ -32,7 +33,7 @@ export async function POST(
     const existingAttempt = await prisma.quizAttempt.findFirst({
       where: {
         userId: session.user.id,
-        quizId: params.id,
+        quizId: id,
       }
     })
 
@@ -44,7 +45,7 @@ export async function POST(
     const attempt = await prisma.quizAttempt.create({
       data: {
         userId: session.user.id,
-        quizId: params.id,
+        quizId: id,
         startedAt: new Date(),
       }
     })

@@ -105,6 +105,7 @@ model Quiz {
   code        String    @unique // Unique enrollment code
   materialUrl String?   // Link to study material
   timeLimit   Int?      // Time limit in minutes
+  maxAttempts Int?      // Maximum number of attempts allowed (null = unlimited)
   status      QuizStatus @default(DRAFT)
   isActive    Boolean   @default(true)
   

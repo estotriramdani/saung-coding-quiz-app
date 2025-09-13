@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(validatedData.password, 12)
 
     // Create user data
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const userData: any = {
       email: validatedData.email,
       password: hashedPassword,

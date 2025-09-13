@@ -14,9 +14,10 @@ const submitSchema = z.object({
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await auth()
     
     if (!session?.user || session.user.role !== Role.STUDENT) {
@@ -38,7 +39,7 @@ export async function POST(
       }
     })
 
-    if (!attempt || attempt.userId !== session.user.id || attempt.quizId !== params.id) {
+    if (!attempt || attempt.userId !== session.user.id || attempt.quizId !== id) {
       return NextResponse.json({ error: "Invalid attempt" }, { status: 403 })
     }
 

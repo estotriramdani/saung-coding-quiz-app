@@ -1,7 +1,7 @@
 "use client"
 
 import { useSession } from "next-auth/react"
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, use } from "react"
 import { useRouter } from "next/navigation"
 import { Role, QuestionType } from "@prisma/client"
 import useSWR from "swr"
@@ -29,9 +29,10 @@ interface Answer {
   answer: string
 }
 
-export default function TakeQuizPage({ params }: { params: { id: string } }) {
+export default function TakeQuizPage({ params }: { params: Promise<{ id: string }> }) {
   const { data: session } = useSession()
   const router = useRouter()
+  const resolvedParams = use(params)
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [answers, setAnswers] = useState<Answer[]>([])
   const [timeLeft, setTimeLeft] = useState<number | null>(null)
@@ -39,7 +40,7 @@ export default function TakeQuizPage({ params }: { params: { id: string } }) {
   const [attemptId, setAttemptId] = useState<string | null>(null)
 
   const { data: quiz, error } = useSWR<Quiz>(
-    session?.user?.role === Role.STUDENT && params.id ? `/api/quizzes/${params.id}/take` : null,
+    session?.user?.role === Role.STUDENT && resolvedParams.id ? `/api/quizzes/${resolvedParams.id}/take` : null,
     fetcher
   )
 
@@ -75,7 +76,7 @@ export default function TakeQuizPage({ params }: { params: { id: string } }) {
 
   const startQuizAttempt = async () => {
     try {
-      const response = await fetch(`/api/quizzes/${params.id}/attempt`, {
+      const response = await fetch(`/api/quizzes/${resolvedParams.id}/attempt`, {
         method: "POST",
       })
       
@@ -114,7 +115,7 @@ export default function TakeQuizPage({ params }: { params: { id: string } }) {
 
     setIsSubmitting(true)
     try {
-      const response = await fetch(`/api/quizzes/${params.id}/submit`, {
+      const response = await fetch(`/api/quizzes/${resolvedParams.id}/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -125,7 +126,7 @@ export default function TakeQuizPage({ params }: { params: { id: string } }) {
 
       if (response.ok) {
         const result = await response.json()
-        router.push(`/student/quiz/${params.id}/result?attemptId=${attemptId}`)
+        router.push(`/student/quiz/${resolvedParams.id}/result?attemptId=${attemptId}`)
       } else {
         throw new Error("Failed to submit quiz")
       }
@@ -135,7 +136,7 @@ export default function TakeQuizPage({ params }: { params: { id: string } }) {
     } finally {
       setIsSubmitting(false)
     }
-  }, [isSubmitting, attemptId, answers, params.id, router])
+  }, [isSubmitting, attemptId, answers, resolvedParams.id, router])
 
   if (!session || session.user.role !== Role.STUDENT) {
     return (

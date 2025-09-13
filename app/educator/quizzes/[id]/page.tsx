@@ -37,6 +37,7 @@ interface Quiz {
   code: string
   materialUrl: string | null
   timeLimit: number | null
+  maxAttempts: number | null
   isActive: boolean
   createdAt: string
   questions: Array<{
@@ -377,6 +378,9 @@ export default function QuizDetailPage({ params }: { params: Promise<{ id: strin
                 </div>
                 <div>
                   <strong>Time Limit:</strong> {quiz.timeLimit ? `${quiz.timeLimit} minutes` : "No limit"}
+                </div>
+                <div>
+                  <strong>Max Attempts:</strong> {quiz.maxAttempts ? `${quiz.maxAttempts} attempt${quiz.maxAttempts > 1 ? 's' : ''}` : "Unlimited"}
                 </div>
                 <div>
                   <strong>Created:</strong> {new Date(quiz.createdAt).toLocaleDateString()}

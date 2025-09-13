@@ -5,9 +5,10 @@ import { Role } from "@prisma/client"
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await auth()
 
     if (!session?.user || session.user.role !== Role.ADMIN) {
@@ -21,7 +22,7 @@ export async function PATCH(
     }
 
     const updatedUser = await prisma.user.update({
-      where: { id: params.id },
+      where: { id },
       data: { role },
       select: {
         id: true,
@@ -44,9 +45,10 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await auth()
 
     if (!session?.user || session.user.role !== Role.ADMIN) {
@@ -54,7 +56,7 @@ export async function DELETE(
     }
 
     // Prevent admin from deleting themselves
-    if (session.user.id === params.id) {
+    if (session.user.id === id) {
       return NextResponse.json(
         { error: "Cannot delete your own account" },
         { status: 400 }
@@ -65,27 +67,27 @@ export async function DELETE(
     await prisma.$transaction(async (tx) => {
       // Delete quiz attempts first
       await tx.quizAttempt.deleteMany({
-        where: { userId: params.id },
+        where: { userId: id },
       })
 
       // Delete enrollments
       await tx.quizEnrollment.deleteMany({
-        where: { userId: params.id },
+        where: { userId: id },
       })
 
       // Delete questions for quizzes created by this user
       await tx.question.deleteMany({
-        where: { quiz: { createdById: params.id } },
+        where: { quiz: { createdById: id } },
       })
 
       // Delete quizzes created by this user
       await tx.quiz.deleteMany({
-        where: { createdById: params.id },
+        where: { createdById: id },
       })
 
       // Finally delete the user
       await tx.user.delete({
-        where: { id: params.id },
+        where: { id },
       })
     })
 

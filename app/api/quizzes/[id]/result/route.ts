@@ -5,9 +5,10 @@ import { Role } from "@prisma/client"
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await auth()
     
     if (!session?.user || session.user.role !== Role.STUDENT) {
@@ -60,7 +61,7 @@ export async function GET(
     }
 
     // Verify this attempt belongs to the current user and quiz
-    if (attempt.userId !== session.user.id || attempt.quizId !== params.id) {
+    if (attempt.userId !== session.user.id || attempt.quizId !== id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 

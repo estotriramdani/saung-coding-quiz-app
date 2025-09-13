@@ -18,6 +18,9 @@ interface RecentQuiz {
   score: number | null
   completedAt: string | null
   totalPoints: number | null
+  maxAttempts: number | null
+  attemptCount: number
+  canRetake: boolean
 }
 
 export default function StudentDashboard() {
@@ -70,7 +73,7 @@ export default function StudentDashboard() {
             </svg>
           </div>
           <div className="stat-title">Enrolled Quizzes</div>
-          <div className="stat-value text-primary">{stats.totalEnrollments}</div>
+          <div className="stat-value text-primary">{stats?.totalEnrollments || 0}</div>
         </div>
 
         <div className="stat bg-base-100 shadow rounded-box">
@@ -80,7 +83,7 @@ export default function StudentDashboard() {
             </svg>
           </div>
           <div className="stat-title">Completed</div>
-          <div className="stat-value text-secondary">{stats.completedQuizzes}</div>
+          <div className="stat-value text-secondary">{stats?.completedQuizzes || 0}</div>
         </div>
 
         <div className="stat bg-base-100 shadow rounded-box">
@@ -90,7 +93,9 @@ export default function StudentDashboard() {
             </svg>
           </div>
           <div className="stat-title">Average Score</div>
-          <div className="stat-value text-accent">{stats.averageScore.toFixed(1)}%</div>
+          <div className="stat-value text-accent">
+            {stats?.averageScore !== undefined ? stats.averageScore.toFixed(1) : '0.0'}%
+          </div>
         </div>
 
         <div className="stat bg-base-100 shadow rounded-box">
@@ -100,7 +105,9 @@ export default function StudentDashboard() {
             </svg>
           </div>
           <div className="stat-title">Time Studied</div>
-          <div className="stat-value text-info">{Math.round(stats.totalTimeSpent / 60)}m</div>
+          <div className="stat-value text-info">
+            {Math.round((stats?.totalTimeSpent || 0) / 60)}m
+          </div>
         </div>
       </div>
 
@@ -120,14 +127,26 @@ export default function StudentDashboard() {
                       <p className="text-sm opacity-70">
                         {quiz.completedAt ? new Date(quiz.completedAt).toLocaleDateString() : "Not completed"}
                       </p>
+                      <div className="flex gap-2 mt-1">
+                        <span className="text-xs opacity-60">
+                          Attempts: {quiz.attemptCount}{quiz.maxAttempts ? `/${quiz.maxAttempts}` : '/∞'}
+                        </span>
+                        {!quiz.canRetake && (
+                          <span className="text-xs text-error">Max attempts reached</span>
+                        )}
+                      </div>
                     </div>
                     <div className="text-right">
                       {quiz.score !== null && quiz.totalPoints ? (
                         <div className="badge badge-success">
                           {((quiz.score / quiz.totalPoints) * 100).toFixed(0)}%
                         </div>
+                      ) : quiz.canRetake ? (
+                        <a href={`/student/quiz/${quiz.id}`} className="badge badge-warning">
+                          {quiz.attemptCount > 0 ? 'Retake' : 'Take Quiz'}
+                        </a>
                       ) : (
-                        <div className="badge badge-warning">Pending</div>
+                        <div className="badge badge-error">Completed</div>
                       )}
                     </div>
                   </div>

@@ -5,9 +5,10 @@ import { Role } from "@prisma/client"
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await auth()
 
     if (!session?.user || session.user.role !== Role.ADMIN) {
@@ -31,9 +32,10 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await auth()
 
     if (!session?.user || session.user.role !== Role.ADMIN) {
@@ -44,27 +46,27 @@ export async function DELETE(
     await prisma.$transaction(async (tx) => {
       // Delete question answers first
       await tx.questionAnswer.deleteMany({
-        where: { question: { quizId: params.id } },
+        where: { question: { quizId: id } },
       })
 
       // Delete quiz attempts
       await tx.quizAttempt.deleteMany({
-        where: { quizId: params.id },
+        where: { quizId: id },
       })
 
       // Delete enrollments
       await tx.quizEnrollment.deleteMany({
-        where: { quizId: params.id },
+        where: { quizId: id },
       })
 
       // Delete questions
       await tx.question.deleteMany({
-        where: { quizId: params.id },
+        where: { quizId: id },
       })
 
       // Finally delete the quiz
       await tx.quiz.delete({
-        where: { id: params.id },
+        where: { id },
       })
     })
 

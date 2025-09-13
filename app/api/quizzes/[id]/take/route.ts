@@ -5,9 +5,10 @@ import { Role } from "@prisma/client"
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await auth()
     
     if (!session?.user || session.user.role !== Role.STUDENT) {
@@ -19,7 +20,7 @@ export async function GET(
       where: {
         userId_quizId: {
           userId: session.user.id,
-          quizId: params.id,
+          quizId: id,
         }
       }
     })
@@ -28,21 +29,40 @@ export async function GET(
       return NextResponse.json({ error: "You are not enrolled in this quiz" }, { status: 403 })
     }
 
-    // Check if already attempted
-    const existingAttempt = await prisma.quizAttempt.findFirst({
-      where: {
-        userId: session.user.id,
-        quizId: params.id,
+    // Get quiz details first to check maxAttempts
+    const quiz = await prisma.quiz.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        timeLimit: true,
+        maxAttempts: true,
+        isActive: true,
       }
     })
 
-    if (existingAttempt) {
-      return NextResponse.json({ error: "You have already attempted this quiz" }, { status: 403 })
+    if (!quiz || !quiz.isActive) {
+      return NextResponse.json({ error: "Quiz not found or not active" }, { status: 404 })
+    }
+
+    // Check existing attempts and validate against maxAttempts
+    const existingAttempts = await prisma.quizAttempt.findMany({
+      where: {
+        userId: session.user.id,
+        quizId: id,
+      }
+    })
+
+    if (quiz.maxAttempts && existingAttempts.length >= quiz.maxAttempts) {
+      return NextResponse.json({ 
+        error: `You have reached the maximum number of attempts (${quiz.maxAttempts}) for this quiz` 
+      }, { status: 403 })
     }
 
     // Get quiz with questions (but don't include correct answers)
-    const quiz = await prisma.quiz.findUnique({
-      where: { id: params.id },
+    const quizWithQuestions = await prisma.quiz.findUnique({
+      where: { id },
       include: {
         questions: {
           select: {
@@ -57,11 +77,11 @@ export async function GET(
       }
     })
 
-    if (!quiz || !quiz.isActive) {
-      return NextResponse.json({ error: "Quiz not found or not active" }, { status: 404 })
+    if (!quizWithQuestions) {
+      return NextResponse.json({ error: "Quiz not found" }, { status: 404 })
     }
 
-    return NextResponse.json(quiz)
+    return NextResponse.json(quizWithQuestions)
   } catch (error) {
     console.error("Error fetching quiz for taking:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })

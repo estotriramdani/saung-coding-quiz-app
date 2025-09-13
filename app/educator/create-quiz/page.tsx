@@ -13,6 +13,7 @@ const quizSchema = z.object({
   description: z.string().optional(),
   materialUrl: z.string().url().optional().or(z.literal("")),
   timeLimit: z.number().min(1, "Time limit must be at least 1 minute").optional(),
+  maxAttempts: z.number().min(1, "Max attempts must be at least 1").optional(),
 })
 
 type QuizForm = z.infer<typeof quizSchema>
@@ -162,6 +163,28 @@ export default function CreateQuizPage() {
               </div>
               <label className="label">
                 <span className="label-text-alt">Leave empty for no time limit</span>
+              </label>
+            </div>
+
+            {/* Max Attempts */}
+            <div className="form-control w-full">
+              <label className="label">
+                <span className="label-text font-medium">Maximum Attempts</span>
+                <span className="label-text-alt">Optional</span>
+              </label>
+              <div className="input-group">
+                <input
+                  {...register("maxAttempts", { valueAsNumber: true })}
+                  type="number"
+                  min="1"
+                  max="20"
+                  placeholder="Unlimited"
+                  className="input input-bordered flex-1"
+                />
+                <span className="bg-base-200 px-4 flex items-center text-sm">attempts</span>
+              </div>
+              <label className="label">
+                <span className="label-text-alt">Leave empty for unlimited attempts</span>
               </label>
             </div>
 

@@ -9,6 +9,7 @@ const createQuizSchema = z.object({
   description: z.string().optional(),
   materialUrl: z.string().url().optional().or(z.literal("")),
   timeLimit: z.number().min(1).optional(),
+  maxAttempts: z.number().min(1).optional(),
   questions: z.array(z.object({
     question: z.string().min(1),
     type: z.nativeEnum(QuestionType),
@@ -44,11 +45,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Create quiz with or without questions
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const quizData: any = {
       title: validatedData.title,
       description: validatedData.description,
       materialUrl: validatedData.materialUrl || null,
       timeLimit: validatedData.timeLimit,
+      maxAttempts: validatedData.maxAttempts,
       code,
       createdById: session.user.id,
     }

@@ -1,0 +1,26 @@
+{
+  "questions": [
+    {
+      "question": "What is the capital of France?",
+      "type": "MULTIPLE_CHOICE",
+      "options": ["London", "Berlin", "Paris", "Madrid"],
+      "correctAnswer": "Paris",
+      "explanation": "Paris is the capital and most populous city of France.",
+      "points": 1
+    },
+    {
+      "question": "JavaScript is a compiled language",
+      "type": "TRUE_FALSE", 
+      "correctAnswer": "False",
+      "explanation": "JavaScript is an interpreted language, not compiled.",
+      "points": 1
+    },
+    {
+      "question": "What does HTML stand for?",
+      "type": "SHORT_ANSWER",
+      "correctAnswer": "HyperText Markup Language", 
+      "explanation": "HTML stands for HyperText Markup Language.",
+      "points": 1
+    }
+  ]
+}
